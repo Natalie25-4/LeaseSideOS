@@ -90,4 +90,40 @@ create trigger parties_updated_at_trigger
 create view tenants     as select * from parties where party_type = 'tenant';
 create view landlords   as select * from parties where party_type = 'landlord';
 
+create table leases (
+    id uuid primary key default gen_random_uuid(),
+    organisation_id uuid not null references organisations(id) on delete cascade,
+    property_id uuid not null references properties(id) on delete restrict,
+    tenant_party_id uuid references parties(id) on delete set null,
+    landlord_party_id uuid references parties(id) on delete set null,
+    reference text,
+    status text not null default 'draft'
+        check (status in ('draft', 'active', 'terminated', 'expired', 'terminated')),
+    commencement_date date,
+    expiry_date date,
+    created_at timestamp with time zone not null default now(),
+    updated_at timestamp with time zone not null default now(),
+
+    constraint leases_dates_ordered check (
+        commencement_date is null or expiry_date is null
+        or expiry_date > commencement_date
+    ),
+    constraint leases_active_has_dates check (
+        status <> 'active'
+        or (commencement_date is not null and expiry_date is not null)
+    ),
+    constraint leases_distinct_parties check (
+        tenant_party_id is null or landlord_party_id is null
+        or tenant_party_id <> landlord_party_id
+    ),
+    unique (organisation_id, reference)
+);
+
+create index leases_organisation_id_idx on leases(organisation_id);
+create index leases_property_id_idx on leases(property_id);
+create index leases_expiry_active_idx on leases(expiry_date) where status = 'active';
+
+create trigger leases_updated_at_trigger
+    before update on leases
+    for each row execute function set_updated_at();
 
