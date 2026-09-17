@@ -39,27 +39,29 @@ export default function LeasesPage() {
   }, []);
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-10">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-charcoal">Leases</h1>
-        <p className="mt-1 text-sm text-charcoal/60">
-          All uploaded commercial leases across your portfolio.
-        </p>
-      </div>
-
-      {error && (
-        <div className="rounded-lg border border-critical/30 bg-critical/5 px-4 py-3 text-sm text-critical">
-          {error}
+    <main className="min-h-screen bg-surface">
+      <div className="mx-auto max-w-5xl px-6 py-10">
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-charcoal">Leases</h1>
+          <p className="mt-1 text-sm text-charcoal/60">
+            All uploaded commercial leases across your portfolio.
+          </p>
         </div>
-      )}
 
-      {!error && leases === null && <LoadingState />}
+        {error && (
+          <div className="rounded-lg border border-critical/30 bg-critical/5 px-4 py-3 text-sm text-critical">
+            {error}
+          </div>
+        )}
 
-      {!error && leases !== null && leases.length === 0 && <EmptyState />}
+        {!error && leases === null && <LoadingState />}
 
-      {!error && leases !== null && leases.length > 0 && (
-        <LeaseTable leases={leases} />
-      )}
+        {!error && leases !== null && leases.length === 0 && <EmptyState />}
+
+        {!error && leases !== null && leases.length > 0 && (
+          <LeaseTable leases={leases} />
+        )}
+      </div>
     </main>
   );
 }

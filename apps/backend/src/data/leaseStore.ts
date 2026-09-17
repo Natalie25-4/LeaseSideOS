@@ -106,3 +106,4 @@ export function addLease(lease: Omit<Lease, "id">): Lease {
   leases = [...leases, newLease];
   return newLease;
 }
+
