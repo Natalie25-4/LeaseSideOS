@@ -63,3 +63,31 @@ create trigger properties_updated_at_trigger
     before update on properties
     for each row execute function set_updated_at();
 
+create table parties (
+    id uuid primary key default gen_random_uuid(),
+    organisation_id uuid not null references organisations(id) on delete cascade,
+    legal_name text not null,
+    trading_name text,
+    party_type text not null
+        check (party_type in ('tenant', 'landlord', 'guarantor', 'agent')),
+    nzbn text,
+    contact_name text,
+    contact_email citext,
+    contact_phone text,
+    postal_address text,
+    notes text,
+    created_at timestamp with time zone not null default now(),
+    updated_at timestamp with time zone not null default now()  
+);
+
+create index parties_organisation_id_idx on parties(organisation_id);
+create index parties_type_idx on parties(organisation_id,party_type);
+
+create trigger parties_updated_at_trigger
+    before update on parties
+    for each row execute function set_updated_at();
+
+create view tenants     as select * from parties where party_type = 'tenant';
+create view landlords   as select * from parties where party_type = 'landlord';
+
+
