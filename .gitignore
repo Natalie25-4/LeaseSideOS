@@ -2,6 +2,7 @@
 node_modules/
 .next/
 .turbo/
+dist/
 
 # Python
 services/**/__pycache__/
@@ -9,6 +10,8 @@ services/**/*.pyc
 services/**/.venv/
 services/**/venv/
 .venv/
+__pycache__/
+*.pyc
 
 # Env files
 .env
