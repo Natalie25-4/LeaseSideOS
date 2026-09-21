@@ -11,6 +11,11 @@
  * package.json has no "workspaces" field), so this is a local copy rather
  * than an import - someone should wire up npm/pnpm workspaces properly and
  * then this type can just be imported from "shared" instead of duplicated.
+ *
+ * rentReviewDate / renewalOptionDate are optional because most leases don't
+ * have one of each - added for the "Key date detection" card (SPRINT 7),
+ * which needs all three date types (rent review, renewal option, expiry) to
+ * scan for. endDate already covers expiry.
  */
 
 export interface Lease {
@@ -23,6 +28,21 @@ export interface Lease {
   endDate: string;
   rentAmount: number;
   status: "active" | "expiring" | "expired" | "under_review";
+  rentReviewDate?: string;
+  renewalOptionDate?: string;
+}
+
+/**
+ * Formats "today + offsetDays" as an ISO date (YYYY-MM-DD), so the seeded
+ * rent review / renewal option dates below stay "varying distances from
+ * today" no matter when the server actually runs - needed for the "Seed
+ * leases with dates at varying distances from today" testing checklist item
+ * on the Key date detection card.
+ */
+function daysFromNow(offsetDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return d.toISOString().slice(0, 10);
 }
 
 let leases: Lease[] = [
@@ -36,6 +56,8 @@ let leases: Lease[] = [
     endDate: "2027-01-31",
     rentAmount: 8500,
     status: "active",
+    // Rent review coming up soon - inside the detection window.
+    rentReviewDate: daysFromNow(15),
   },
   {
     id: "lease-002",
@@ -69,6 +91,9 @@ let leases: Lease[] = [
     endDate: "2029-02-28",
     rentAmount: 6800,
     status: "active",
+    // Rent review far out - deliberately outside the detection window, so
+    // it should NOT produce a task. Boundary-testing data point.
+    rentReviewDate: daysFromNow(200),
   },
   {
     id: "lease-005",
@@ -80,6 +105,8 @@ let leases: Lease[] = [
     endDate: "2026-10-15",
     rentAmount: 4100,
     status: "under_review",
+    // Renewal option coming up - inside the detection window.
+    renewalOptionDate: daysFromNow(45),
   },
   {
     id: "lease-006",
@@ -91,6 +118,8 @@ let leases: Lease[] = [
     endDate: "2026-12-20",
     rentAmount: 9700,
     status: "expiring",
+    // Renewal option far out - outside the detection window.
+    renewalOptionDate: daysFromNow(120),
   },
 ];
 
@@ -107,3 +136,12 @@ export function addLease(lease: Omit<Lease, "id">): Lease {
   return newLease;
 }
 
+/**
+ * Testing helper for the "test a portfolio with zero upcoming events" case
+ * on the Key date detection card - lets that scenario be exercised via the
+ * API instead of hand-editing this file and restarting the server.
+ * Not used by any real feature code.
+ */
+export function setLeasesForTesting(newLeases: Lease[]): void {
+  leases = newLeases;
+}
