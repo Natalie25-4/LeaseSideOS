@@ -1,4 +1,4 @@
-import type { Lease } from "./types";
+import type { AccountingSummaryRow, Lease } from "./types";
 
 // Backend runs on :4000 in local dev (see apps/backend/src/index.ts).
 // Override with NEXT_PUBLIC_API_URL for other environments once this
@@ -25,4 +25,25 @@ export async function fetchLeases(): Promise<Lease[]> {
 
   const data = (await res.json()) as { leases: Lease[] };
   return data.leases;
+}
+
+/**
+ * Supports the accounting page (SPRINT 10 - "Rent and OPEX tracking" /
+ * "Rent review calculation"): per-lease rent, OPEX, and the calculated
+ * next rent review amount.
+ */
+export async function fetchAccountingSummary(): Promise<AccountingSummaryRow[]> {
+  const res = await fetch(`${API_BASE_URL}/accounting/summary`, {
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    throw new ApiError(
+      `Failed to load accounting summary (${res.status})`,
+      res.status
+    );
+  }
+
+  const data = (await res.json()) as { summary: AccountingSummaryRow[] };
+  return data.summary;
 }

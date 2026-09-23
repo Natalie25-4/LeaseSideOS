@@ -16,7 +16,35 @@
  * have one of each - added for the "Key date detection" card (SPRINT 7),
  * which needs all three date types (rent review, renewal option, expiry) to
  * scan for. endDate already covers expiry.
+ *
+ * opexAmount / rentReviewTerms added for the "Rent and OPEX tracking" and
+ * "Rent review calculation" cards (SPRINT 10). Both are optional because
+ * not every lease has OPEX passed through or a rent review clause.
  */
+
+export type RentIncreaseType = "fixed_percentage" | "fixed_amount" | "cpi";
+
+export interface RentReviewTerms {
+  type: RentIncreaseType;
+  /**
+   * Meaning depends on `type`:
+   * - fixed_percentage: decimal, e.g. 0.03 = 3% increase
+   * - fixed_amount: dollar amount added to the current rent
+   * - cpi: unused - see cpiOverrideRate below
+   */
+  value?: number;
+  /**
+   * Only meaningful for type "cpi". Lets a specific lease be seeded with a
+   * known CPI rate (including negative, for the "negative CPI" testing
+   * checklist item) instead of falling back to the shared default rate in
+   * rentCalculations.ts.
+   */
+  cpiOverrideRate?: number;
+  /** Upper bound on the effective increase percentage, e.g. 0.05 = 5% cap. */
+  capPercentage?: number;
+  /** Lower bound on the effective increase percentage, e.g. 0 = rent never decreases. */
+  collarPercentage?: number;
+}
 
 export interface Lease {
   id: string;
@@ -30,6 +58,9 @@ export interface Lease {
   status: "active" | "expiring" | "expired" | "under_review";
   rentReviewDate?: string;
   renewalOptionDate?: string;
+  /** Annual operating expenses passed through to the tenant, on top of rent. */
+  opexAmount?: number;
+  rentReviewTerms?: RentReviewTerms;
 }
 
 /**
@@ -58,6 +89,9 @@ let leases: Lease[] = [
     status: "active",
     // Rent review coming up soon - inside the detection window.
     rentReviewDate: daysFromNow(15),
+    opexAmount: 1200,
+    // Straightforward fixed percentage increase, no cap/collar.
+    rentReviewTerms: { type: "fixed_percentage", value: 0.03 },
   },
   {
     id: "lease-002",
@@ -69,6 +103,9 @@ let leases: Lease[] = [
     endDate: "2026-11-30",
     rentAmount: 5200,
     status: "expiring",
+    opexAmount: 800,
+    // CPI-linked with no override - uses the shared DEFAULT_CPI_ANNUAL_RATE.
+    rentReviewTerms: { type: "cpi" },
   },
   {
     id: "lease-003",
@@ -80,6 +117,8 @@ let leases: Lease[] = [
     endDate: "2025-12-31",
     rentAmount: 12000,
     status: "expired",
+    opexAmount: 1500,
+    // Already expired - no active rent review terms.
   },
   {
     id: "lease-004",
@@ -94,6 +133,9 @@ let leases: Lease[] = [
     // Rent review far out - deliberately outside the detection window, so
     // it should NOT produce a task. Boundary-testing data point.
     rentReviewDate: daysFromNow(200),
+    opexAmount: 950,
+    // Fixed $500 increase (~7.4%) capped at 5% - "capped increase" test case.
+    rentReviewTerms: { type: "fixed_amount", value: 500, capPercentage: 0.05 },
   },
   {
     id: "lease-005",
@@ -107,6 +149,10 @@ let leases: Lease[] = [
     status: "under_review",
     // Renewal option coming up - inside the detection window.
     renewalOptionDate: daysFromNow(45),
+    opexAmount: 600,
+    // Negative CPI (deflation), collared at 0% so rent never decreases -
+    // covers both the "negative CPI" and "collared increase" test cases.
+    rentReviewTerms: { type: "cpi", cpiOverrideRate: -0.005, collarPercentage: 0 },
   },
   {
     id: "lease-006",
@@ -120,6 +166,8 @@ let leases: Lease[] = [
     status: "expiring",
     // Renewal option far out - outside the detection window.
     renewalOptionDate: daysFromNow(120),
+    opexAmount: 1100,
+    rentReviewTerms: { type: "fixed_percentage", value: 0.04 },
   },
 ];
 
