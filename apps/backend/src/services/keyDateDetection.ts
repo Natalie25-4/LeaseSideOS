@@ -12,21 +12,14 @@
  */
 
 import { getAllLeases, Lease } from "../data/leaseStore";
-import { ClarkTask, ClarkTaskEventType, replaceAllTasks } from "../data/taskStore";
+import { ClarkTask, ClarkTaskEventType, getAllTasks, replaceAllTasks } from "../data/taskStore";
+import { classifyUrgency, daysUntil, compareTaskUrgency } from "./taskUrgency";
 
 // How far ahead to look for key dates. 90 days gives PMs a quarter's worth
 // of runway on rent reviews/renewals/expiries - tune this once the team has
 // real-world feedback on what "nothing slips through" should mean in
 // practice.
 export const DETECTION_WINDOW_DAYS = 90;
-
-function daysBetween(from: Date, to: Date): number {
-  const msPerDay = 24 * 60 * 60 * 1000;
-  // Normalize both to midnight so partial-day drift doesn't shift the count.
-  const fromMidnight = new Date(from.getFullYear(), from.getMonth(), from.getDate());
-  const toMidnight = new Date(to.getFullYear(), to.getMonth(), to.getDate());
-  return Math.round((toMidnight.getTime() - fromMidnight.getTime()) / msPerDay);
-}
 
 function describeEvent(eventType: ClarkTaskEventType, lease: Lease, daysUntilEvent: number): string {
   const when = daysUntilEvent === 0 ? "today" : `in ${daysUntilEvent} day${daysUntilEvent === 1 ? "" : "s"}`;
@@ -48,7 +41,12 @@ function buildTaskIfUpcoming(
 ): ClarkTask | null {
   if (!eventDate) return null;
 
-  const daysUntilEvent = daysBetween(referenceDate, new Date(eventDate));
+  let daysUntilEvent: number;
+  try {
+    daysUntilEvent = daysUntil(eventDate, referenceDate);
+  } catch {
+    return null;
+  }
 
   // Only "upcoming" events count - already-passed dates and anything
   // further out than the detection window are skipped.
@@ -62,6 +60,7 @@ function buildTaskIfUpcoming(
     eventType,
     eventDate,
     daysUntilEvent,
+    urgency: classifyUrgency(eventType, daysUntilEvent),
     description: describeEvent(eventType, lease, daysUntilEvent),
     createdAt: new Date().toISOString(),
   };
@@ -75,6 +74,7 @@ function buildTaskIfUpcoming(
  * result directly.
  */
 export function scanLeasesForKeyDates(referenceDate: Date = new Date()): ClarkTask[] {
+  if (!Number.isFinite(referenceDate.getTime())) throw new Error("Invalid reference date");
   const leases = getAllLeases();
   const tasks: ClarkTask[] = [];
 
@@ -89,7 +89,15 @@ export function scanLeasesForKeyDates(referenceDate: Date = new Date()): ClarkTa
     if (renewalTask) tasks.push(renewalTask);
   }
 
-  tasks.sort((a, b) => a.daysUntilEvent - b.daysUntilEvent);
+  // Previously detected events stay visible when overdue. Remove them when the
+  // lease disappears or its event date changes, rather than reviving old dates.
+  for (const old of getAllTasks(referenceDate)) {
+    const lease = leases.find((item) => item.id === old.leaseId);
+    const date = old.eventType === "expiry" ? lease?.endDate
+      : old.eventType === "rent_review" ? lease?.rentReviewDate : lease?.renewalOptionDate;
+    if (old.daysUntilEvent < 0 && date === old.eventDate) tasks.push(old);
+  }
+  tasks.sort(compareTaskUrgency);
 
   replaceAllTasks(tasks);
   return tasks;

@@ -11,6 +11,8 @@
  * leaseStore.ts.
  */
 
+import { classifyUrgency, daysUntil, Urgency } from "../services/taskUrgency";
+
 export type ClarkTaskEventType = "rent_review" | "renewal_option" | "expiry";
 
 export interface ClarkTask {
@@ -21,20 +23,27 @@ export interface ClarkTask {
   eventType: ClarkTaskEventType;
   eventDate: string; // ISO date the event falls on
   daysUntilEvent: number;
+  urgency: Urgency;
   description: string;
   createdAt: string; // ISO timestamp of when this task record was generated
 }
 
 let tasks: ClarkTask[] = [];
 
-export function getAllTasks(): ClarkTask[] {
+export function getAllTasks(referenceDate: Date = new Date()): ClarkTask[] {
+  tasks = tasks.map((task) => {
+    const daysUntilEvent = daysUntil(task.eventDate, referenceDate);
+    const when = daysUntilEvent < 0 ? `${-daysUntilEvent} day(s) overdue`
+      : daysUntilEvent === 0 ? "today" : `in ${daysUntilEvent} day(s)`;
+    return { ...task, daysUntilEvent, urgency: classifyUrgency(task.eventType, daysUntilEvent),
+      description: `${task.eventType.replace(/_/g, " ")} ${when} for ${task.tenantName} at ${task.propertyName}.` };
+  });
   return tasks;
 }
 
 /**
- * Each scan represents "what's currently upcoming", so a fresh scan
- * replaces the previous batch rather than piling up duplicates every time
- * the scheduled job runs.
+ * Replace a scan's snapshot (including previously detected overdue events)
+ * rather than accumulating duplicate records on every scheduled run.
  */
 export function replaceAllTasks(newTasks: ClarkTask[]): void {
   tasks = newTasks;
