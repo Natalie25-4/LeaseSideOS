@@ -2,6 +2,7 @@ import express from "express";
 import leasesRouter from "./routes/leases";
 import tasksRouter from "./routes/tasks";
 import accountingRouter from "./routes/accounting";
+import maintenanceRouter from "./routes/maintenance";
 import { scanLeasesForKeyDates } from "./services/keyDateDetection";
 
 const app = express();
@@ -29,6 +30,7 @@ app.get("/health", (req, res) => {
 app.use(leasesRouter);
 app.use(tasksRouter);
 app.use(accountingRouter);
+app.use(maintenanceRouter);
 
 app.listen(PORT, () => {
   console.log(`Backend server running on http://localhost:${PORT}`);

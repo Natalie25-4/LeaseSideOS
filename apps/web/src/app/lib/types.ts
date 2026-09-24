@@ -47,3 +47,23 @@ export interface AccountingSummaryRow {
   totalAmount: number;
   rentReview: RentReviewCalculation | null;
 }
+
+/**
+ * Mirrors apps/backend/src/data/maintenanceStore.ts's MaintenanceRequest -
+ * a maintenance request logged against a property/lease (SPRINT 11 -
+ * "Maintenance request logging" / "Maintenance progress tracking").
+ */
+export type MaintenanceStatus = "logged" | "assigned" | "in_progress" | "resolved";
+
+export interface MaintenanceRequest {
+  id: string;
+  leaseId: string;
+  propertyId: string;
+  propertyName: string;
+  tenantName: string;
+  description: string;
+  status: MaintenanceStatus;
+  assignedTo?: string;
+  createdAt: string;
+  updatedAt: string;
+}

@@ -1,4 +1,4 @@
-import type { AccountingSummaryRow, Lease } from "./types";
+import type { AccountingSummaryRow, Lease, MaintenanceRequest, MaintenanceStatus } from "./types";
 
 // Backend runs on :4000 in local dev (see apps/backend/src/index.ts).
 // Override with NEXT_PUBLIC_API_URL for other environments once this
@@ -46,4 +46,92 @@ export async function fetchAccountingSummary(): Promise<AccountingSummaryRow[]> 
 
   const data = (await res.json()) as { summary: AccountingSummaryRow[] };
   return data.summary;
+}
+
+/**
+ * Supports the maintenance page (SPRINT 11 - "Maintenance request logging"
+ * / "Maintenance progress tracking"): every logged maintenance request.
+ */
+export async function fetchMaintenanceRequests(): Promise<MaintenanceRequest[]> {
+  const res = await fetch(`${API_BASE_URL}/maintenance`, { cache: "no-store" });
+
+  if (!res.ok) {
+    throw new ApiError(
+      `Failed to load maintenance requests (${res.status})`,
+      res.status
+    );
+  }
+
+  const data = (await res.json()) as { requests: MaintenanceRequest[] };
+  return data.requests;
+}
+
+/**
+ * Logs a new maintenance request against a lease/property. Supports the
+ * "Build maintenance request form" checklist item.
+ */
+export async function createMaintenanceRequest(input: {
+  leaseId: string;
+  description: string;
+}): Promise<MaintenanceRequest> {
+  const res = await fetch(`${API_BASE_URL}/maintenance`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { message?: string } | null;
+    throw new ApiError(
+      body?.message ?? `Failed to log maintenance request (${res.status})`,
+      res.status
+    );
+  }
+
+  const data = (await res.json()) as { request: MaintenanceRequest };
+  return data.request;
+}
+
+/** Supports the "Build status update UI" checklist item. */
+export async function updateMaintenanceStatus(
+  id: string,
+  status: MaintenanceStatus
+): Promise<MaintenanceRequest> {
+  const res = await fetch(`${API_BASE_URL}/maintenance/${id}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!res.ok) {
+    throw new ApiError(
+      `Failed to update maintenance request status (${res.status})`,
+      res.status
+    );
+  }
+
+  const data = (await res.json()) as { request: MaintenanceRequest };
+  return data.request;
+}
+
+/** Supports the "Build assignment UI" checklist item. */
+export async function assignMaintenanceRequest(
+  id: string,
+  assignedTo: string
+): Promise<MaintenanceRequest> {
+  const res = await fetch(`${API_BASE_URL}/maintenance/${id}/assign`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ assignedTo }),
+  });
+
+  if (!res.ok) {
+    throw new ApiError(
+      `Failed to assign maintenance request (${res.status})`,
+      res.status
+    );
+  }
+
+  const data = (await res.json()) as { request: MaintenanceRequest };
+  return data.request;
 }
