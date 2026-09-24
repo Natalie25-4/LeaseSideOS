@@ -5,6 +5,19 @@
   --foreground: #171717;
 }
 
+@theme{
+  --font-sans: "Inter", "Geist", -apple-system, "SF Pro Text", sans-serif;
+  --color-charcoal: #1F2328;
+  --color-navy: #0F172A;
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-success: #10B981; /* emerald green */
+  --color-warning: #F59E0B; /* amber */
+  --color-critical: #EF4444; /* red  */
+  --color-border: #E5E7EB;
+  --color-surface: #FFFFFF;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
