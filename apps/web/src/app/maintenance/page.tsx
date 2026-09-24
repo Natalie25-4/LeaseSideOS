@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Lease, MaintenanceRequest, MaintenanceStatus } from "../lib/types";
 import {
@@ -28,6 +29,8 @@ export default function MaintenancePage() {
   const [requests, setRequests] = useState<MaintenanceRequest[] | null>(null);
   const [leases, setLeases] = useState<Lease[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -60,17 +63,17 @@ export default function MaintenancePage() {
   }
 
   async function handleStatusChange(id: string, status: MaintenanceStatus) {
-    const updated = await updateMaintenanceStatus(id, status);
-    setRequests((prev) =>
-      (prev ?? []).map((r) => (r.id === id ? updated : r))
-    );
+    try {
+      await updateMaintenanceStatus(id, status);
+      setNotice("Status change submitted for PM approval. The current status is unchanged.");
+    } catch (err) { setNotice(err instanceof Error ? err.message : "Unable to submit change"); }
   }
 
   async function handleAssign(id: string, assignedTo: string) {
-    const updated = await assignMaintenanceRequest(id, assignedTo);
-    setRequests((prev) =>
-      (prev ?? []).map((r) => (r.id === id ? updated : r))
-    );
+    try {
+      await assignMaintenanceRequest(id, assignedTo);
+      setNotice("Assignment submitted for PM approval. The current assignment is unchanged.");
+    } catch (err) { setNotice(err instanceof Error ? err.message : "Unable to submit change"); }
   }
 
   return (
@@ -85,6 +88,9 @@ export default function MaintenancePage() {
           </p>
         </div>
 
+        <Link href="/approvals" className="mb-4 block underline">Review pending actions (PM)</Link>
+        <p className="mb-4 text-sm">Status and assignment changes require PM approval. Refresh this page after approval to see the applied change.</p>
+        {notice && <p role="status" className="mb-4">{notice}</p>}
         {error && (
           <div className="mb-6 rounded-lg border border-critical/30 bg-critical/5 px-4 py-3 text-sm text-critical">
             {error}

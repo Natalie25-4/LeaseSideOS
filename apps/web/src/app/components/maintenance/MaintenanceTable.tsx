@@ -78,6 +78,7 @@ export default function MaintenanceTable({
                 <div className="flex flex-col gap-1">
                   <StatusBadge status={request.status} />
                   <select
+                    aria-label={`Propose status for ${request.propertyName}`}
                     value={request.status}
                     onChange={(e) =>
                       onStatusChange(request.id, e.target.value as MaintenanceStatus)
@@ -105,13 +106,15 @@ export default function MaintenanceTable({
                         if (e.key === "Escape") setAssigningId(null);
                       }}
                       placeholder="Name"
+                      aria-label="Proposed assignee"
+                      maxLength={200}
                       className="w-24 rounded border border-border bg-surface px-1.5 py-1 text-xs text-charcoal"
                     />
                     <button
                       onClick={() => submitAssign(request.id)}
                       className="text-xs font-medium text-primary hover:text-primary-hover"
                     >
-                      Save
+                      Request approval
                     </button>
                   </div>
                 ) : (

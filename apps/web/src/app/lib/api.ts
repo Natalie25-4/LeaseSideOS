@@ -1,3 +1,4 @@
+import type { ApprovalAction } from "./approvals";
 import type { AccountingSummaryRow, Lease, MaintenanceRequest, MaintenanceStatus } from "./types";
 
 // Backend runs on :4000 in local dev (see apps/backend/src/index.ts).
@@ -96,7 +97,7 @@ export async function createMaintenanceRequest(input: {
 export async function updateMaintenanceStatus(
   id: string,
   status: MaintenanceStatus
-): Promise<MaintenanceRequest> {
+): Promise<ApprovalAction> {
   const res = await fetch(`${API_BASE_URL}/maintenance/${id}/status`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -110,15 +111,15 @@ export async function updateMaintenanceStatus(
     );
   }
 
-  const data = (await res.json()) as { request: MaintenanceRequest };
-  return data.request;
+  const data = (await res.json()) as { action: ApprovalAction };
+  return data.action;
 }
 
 /** Supports the "Build assignment UI" checklist item. */
 export async function assignMaintenanceRequest(
   id: string,
   assignedTo: string
-): Promise<MaintenanceRequest> {
+): Promise<ApprovalAction> {
   const res = await fetch(`${API_BASE_URL}/maintenance/${id}/assign`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -132,6 +133,6 @@ export async function assignMaintenanceRequest(
     );
   }
 
-  const data = (await res.json()) as { request: MaintenanceRequest };
-  return data.request;
+  const data = (await res.json()) as { action: ApprovalAction };
+  return data.action;
 }

@@ -3,8 +3,7 @@ import { getAllLeases } from "../data/leaseStore";
 import {
   getAllRequests,
   addRequest,
-  updateRequestStatus,
-  assignRequest,
+  proposeAction,
   MaintenanceStatus,
 } from "../data/maintenanceStore";
 
@@ -33,9 +32,9 @@ router.get("/maintenance", (req: Request, res: Response) => {
  * supply leaseId + description.
  */
 router.post("/maintenance", (req: Request, res: Response) => {
-  const { leaseId, description } = req.body as { leaseId?: string; description?: string };
+  const { leaseId, description } = req.body ?? {};
 
-  if (!leaseId || !description) {
+  if (typeof leaseId !== "string" || typeof description !== "string" || !description.trim() || description.length > 5000) {
     return res.status(400).json({
       error: "MISSING_FIELDS",
       message: "Missing required fields: leaseId, description",
@@ -67,7 +66,7 @@ router.post("/maintenance", (req: Request, res: Response) => {
  * logged -> assigned -> in_progress -> resolved.
  */
 router.patch("/maintenance/:id/status", (req: Request, res: Response) => {
-  const { status } = req.body as { status?: string };
+  const { status } = req.body ?? {};
 
   if (!status || !VALID_STATUSES.includes(status as MaintenanceStatus)) {
     return res.status(400).json({
@@ -77,12 +76,8 @@ router.patch("/maintenance/:id/status", (req: Request, res: Response) => {
   }
 
   const id = req.params.id as string;
-  const request = updateRequestStatus(id, status as MaintenanceStatus);
-  if (!request) {
-    return res.status(404).json({ error: "NOT_FOUND", message: `No maintenance request with id "${id}"` });
-  }
-
-  res.json({ request });
+  const action = proposeAction(id, { type: "status", status });
+  res.status(202).json({ action, message: "Awaiting PM approval; status has not changed" });
 });
 
 /**
@@ -91,19 +86,15 @@ router.patch("/maintenance/:id/status", (req: Request, res: Response) => {
  * reassigns) a request to someone, e.g. a contractor or team member.
  */
 router.patch("/maintenance/:id/assign", (req: Request, res: Response) => {
-  const { assignedTo } = req.body as { assignedTo?: string };
+  const { assignedTo } = req.body ?? {};
 
-  if (!assignedTo) {
+  if (typeof assignedTo !== "string" || !assignedTo.trim() || assignedTo.length > 200) {
     return res.status(400).json({ error: "MISSING_FIELDS", message: "Missing required field: assignedTo" });
   }
 
   const id = req.params.id as string;
-  const request = assignRequest(id, assignedTo);
-  if (!request) {
-    return res.status(404).json({ error: "NOT_FOUND", message: `No maintenance request with id "${id}"` });
-  }
-
-  res.json({ request });
+  const action = proposeAction(id, { type: "assign", assignedTo: assignedTo.trim() });
+  res.status(202).json({ action, message: "Awaiting PM approval; assignment has not changed" });
 });
 
 export default router;

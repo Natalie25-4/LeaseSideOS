@@ -3,6 +3,7 @@ import leasesRouter from "./routes/leases";
 import tasksRouter from "./routes/tasks";
 import accountingRouter from "./routes/accounting";
 import maintenanceRouter from "./routes/maintenance";
+import approvalsRouter, { approvalErrorHandler } from "./routes/approvals";
 import { scanLeasesForKeyDates } from "./services/keyDateDetection";
 
 const app = express();
@@ -14,7 +15,7 @@ app.use(express.json());
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") {
     return res.sendStatus(204);
   }
@@ -31,6 +32,8 @@ app.use(leasesRouter);
 app.use(tasksRouter);
 app.use(accountingRouter);
 app.use(maintenanceRouter);
+app.use(approvalsRouter);
+app.use(approvalErrorHandler);
 
 app.listen(PORT, () => {
   console.log(`Backend server running on http://localhost:${PORT}`);
