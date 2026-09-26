@@ -127,13 +127,3 @@ Use approximately 20–30 representative, permitted/redacted leases and at least
 Report clause extraction precision/recall, normalized date/amount accuracy, retrieval recall@k, citation correctness, unsupported-claim rate, abstention quality, p50/p95 latency and measured cost. Break results out by scan quality and question type. Human reviewers must check legal/commercial interpretations; model grading alone is insufficient.
 
 Suggested release gates, for team agreement rather than claims of achieved accuracy: zero observed cross-property disclosure or unauthorized action in the test suite; every returned citation resolves to an authorized source; no fabricated critical rent/date/notice fact in the reviewed pilot. Report sample size and unresolved errors rather than promising zero errors in production. Compare both quality and cost with the current Gemini baseline before switching.
-
-## Questions for Natalie / client
-
-1. Does the client already have an Azure subscription, model deployment or required API?
-2. Where may contract data be stored and processed, and which sample leases may we use?
-3. How many leases/pages and questions are expected, and what monthly budget is acceptable?
-4. Is the pilot single-lease Q&A, portfolio reporting, or both? Who signs off correctness?
-5. Which actions are in scope, and who is authorized to approve each one?
-
-**Proposed decision:** agree the RAG direction now; choose the exact deployment and approve migration only after these constraints and the comparison results are available.
