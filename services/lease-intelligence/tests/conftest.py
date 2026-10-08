@@ -28,3 +28,8 @@ def pages(lease_path):
 def segments(pages):
     from app.clauses.segment import segment_pages
     return segment_pages(pages)
+
+
+@pytest.fixture(scope="session")
+def fixtures_dir():
+    return SERVICE_ROOT / "fixtures"
