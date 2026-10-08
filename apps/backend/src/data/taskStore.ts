@@ -13,6 +13,8 @@
 
 import { classifyUrgency, daysUntil, Urgency } from "../services/taskUrgency";
 
+import { explainTaskUrgency } from "../services/taskReasoning";
+
 export type ClarkTaskEventType = "rent_review" | "renewal_option" | "expiry";
 
 export interface ClarkTask {
@@ -25,6 +27,7 @@ export interface ClarkTask {
   daysUntilEvent: number;
   urgency: Urgency;
   description: string;
+  reason: string;
   createdAt: string; // ISO timestamp of when this task record was generated
 }
 
@@ -35,7 +38,7 @@ export function getAllTasks(referenceDate: Date = new Date()): ClarkTask[] {
     const daysUntilEvent = daysUntil(task.eventDate, referenceDate);
     const when = daysUntilEvent < 0 ? `${-daysUntilEvent} day(s) overdue`
       : daysUntilEvent === 0 ? "today" : `in ${daysUntilEvent} day(s)`;
-    return { ...task, daysUntilEvent, urgency: classifyUrgency(task.eventType, daysUntilEvent),
+    return { ...task, reason: explainTaskUrgency(task.eventType, daysUntilEvent), daysUntilEvent, urgency: classifyUrgency(task.eventType, daysUntilEvent),
       description: `${task.eventType.replace(/_/g, " ")} ${when} for ${task.tenantName} at ${task.propertyName}.` };
   });
   return tasks;

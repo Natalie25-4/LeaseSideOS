@@ -66,6 +66,7 @@ test('HTTP scan and list expose urgency sorted before days remaining', async () 
       const {tasks}=await response.json();
       assert.deepEqual(tasks.map(t=>t.urgency),['critical','high']);
       assert.equal(tasks[0].eventType,'renewal_option');
+      for (const task of tasks) assert.match(task.reason, /recorded.*current priority rules/);
     }
   } finally { await new Promise(resolve=>server.close(resolve)); }
 });

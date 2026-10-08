@@ -15,6 +15,8 @@ import { getAllLeases, Lease } from "../data/leaseStore";
 import { ClarkTask, ClarkTaskEventType, getAllTasks, replaceAllTasks } from "../data/taskStore";
 import { classifyUrgency, daysUntil, compareTaskUrgency } from "./taskUrgency";
 
+import { explainTaskUrgency } from "./taskReasoning";
+
 // How far ahead to look for key dates. 90 days gives PMs a quarter's worth
 // of runway on rent reviews/renewals/expiries - tune this once the team has
 // real-world feedback on what "nothing slips through" should mean in
@@ -61,6 +63,7 @@ function buildTaskIfUpcoming(
     eventDate,
     daysUntilEvent,
     urgency: classifyUrgency(eventType, daysUntilEvent),
+    reason: explainTaskUrgency(eventType, daysUntilEvent),
     description: describeEvent(eventType, lease, daysUntilEvent),
     createdAt: new Date().toISOString(),
   };
