@@ -7,6 +7,8 @@ stay comparable across providers and versions.
 
 import os
 import re
+import logging
+log = logging.getLogger(__name__)
 from typing import Protocol
 
 from .schemas import ClauseBase
@@ -61,6 +63,47 @@ class RegexProvider:
         quote = re.sub(r"\s+", " ", m.group(0)).strip()
         return schema(found=True, quote=quote)
 
+class AzureProvider:
+    """Azure OpenAI. Structured output via the OpenAI SDK's parse helper,
+    which validates into our pydantic schema directly.
+    """
+
+    def __init__(self):
+        from openai import OpenAI          # imported lazily: the regex and
+                                            # stub providers must work with
+                                            # no SDK installed
+        endpoint = os.environ["AZURE_OPENAI_ENDPOINT"].rstrip("/")
+        self.deployment = os.environ["AZURE_OPENAI_DEPLOYMENT"]
+        self.client = OpenAI(
+            base_url=f"{endpoint}/openai/v1/",
+            api_key=os.environ["AZURE_OPENAI_API_KEY"],
+        )
+
+    @property
+    def name(self) -> str:
+        # Recorded on every clause row, so results stay comparable.
+        return f"azure:{self.deployment}"
+
+    def complete(self, system, user, schema):
+        try:
+            completion = self.client.beta.chat.completions.parse(
+                model=self.deployment,      # DEPLOYMENT name, not model name
+                temperature=0,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                response_format=schema,
+            )
+        except Exception:
+            log.exception("azure call failed")
+            return None
+
+        message = completion.choices[0].message
+        if getattr(message, "refusal", None):
+            log.warning("model refused: %s", message.refusal)
+            return None
+        return message.parsed            # already a validated schema instance
 
 class StubProvider:
     """Canned responses, including deliberately wrong ones.
@@ -87,5 +130,7 @@ def get_provider(name: str | None = None) -> Provider:
         return RegexProvider()
     if name == "stub":
         return StubProvider({})
+    if name == "azure": 
+        return AzureProvider() 
     # "anthropic" is registered in Phase 9.
     raise ValueError(f"unknown provider: {name!r}")

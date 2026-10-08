@@ -7,6 +7,9 @@ needs no credentials in deployment. The caller owns persistence.
 
 import logging
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
