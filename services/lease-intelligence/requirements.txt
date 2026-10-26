@@ -1,0 +1,14 @@
+# Clause identification service — actual dependencies only.
+#
+# Do NOT regenerate this with `pip freeze` from a shared or Anaconda
+# environment: freeze dumps every package installed on the machine, with
+# local file:/// paths that exist nowhere else, and the file stops working
+# for everyone but you.
+
+fastapi
+pydantic
+uvicorn
+
+# Development and tests
+pytest
+httpx          # required by fastapi.testclient.TestClient
