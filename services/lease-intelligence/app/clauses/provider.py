@@ -11,7 +11,7 @@ import logging
 log = logging.getLogger(__name__)
 from typing import Protocol
 
-from .schemas import ClauseBase
+from .schemas import SCHEMAS, ClauseBase
 
 
 class Provider(Protocol):
@@ -105,6 +105,47 @@ class AzureProvider:
             return None
         return message.parsed            # already a validated schema instance
 
+class GeminiProvider:
+    """Google Gemini. Structured output via response_schema, which accepts
+    our pydantic models directly and returns a validated instance.
+    """
+
+    def __init__(self):
+        from google import genai           # lazy, like Azure: the regex and
+                                           # stub providers must work with no
+                                           # SDK installed
+        self.model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        self.client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+
+    @property
+    def name(self) -> str:
+        # Recorded on every clause row, so results stay comparable.
+        return f"gemini:{self.model}"
+
+    def complete(self, system, user, schema):
+        from google.genai import types
+
+        try:
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=user,
+                config=types.GenerateContentConfig(
+                    system_instruction=system,
+                    temperature=0,
+                    response_mime_type="application/json",
+                    response_schema=schema,
+                ),
+            )
+        except Exception:
+            log.exception("gemini call failed")
+            return None
+
+        parsed = getattr(response, "parsed", None)
+        if parsed is None:
+            log.warning("gemini returned no parseable output")
+            return None
+        return parsed                      # already a validated schema instance
+
 class StubProvider:
     """Canned responses, including deliberately wrong ones.
 
@@ -122,7 +163,44 @@ class StubProvider:
         if data is None:
             return schema(found=False)
         return schema(**data)
+class KeywordProvider:
+    """Deterministic baseline that does not depend on exact phrasing.
 
+    RegexProvider needs the wording it was written for. This one needs only a
+    keyword from keywords.py to appear, and returns the sentence containing the
+    most hits. Broader recall, but it locates clauses rather than parsing them:
+    no amounts, no dates, no structured fields.
+    """
+
+    name = "keyword-v1"
+
+    # schema class name -> clause type, so we can look up the right keywords
+    TYPE_BY_SCHEMA = {cls.__name__: key for key, cls in SCHEMAS.items()}
+
+    def complete(self, system, user, schema):
+        from .keywords import KEYWORDS
+
+        clause_type = self.TYPE_BY_SCHEMA.get(schema.__name__)
+        words = KEYWORDS.get(clause_type or "", [])
+        if not words:
+            return schema(found=False)
+
+        # Split on sentence ends, but not on decimal points — same rule as
+        # RegexProvider.SENT, for the same reason.
+        sentences = re.split(r"(?<=\.)(?!\d)\s+", user)
+
+        best, best_hits = None, 0
+        for sentence in sentences:
+            lowered = sentence.lower()
+            hits = sum(1 for kw in words if kw.lower() in lowered)
+            if hits > best_hits:
+                best, best_hits = sentence, hits
+
+        if best is None:
+            return schema(found=False)
+
+        quote = re.sub(r"\s+", " ", best).strip()
+        return schema(found=True, quote=quote)
 
 def get_provider(name: str | None = None) -> Provider:
     name = name or os.getenv("CLARK_PROVIDER", "regex")
@@ -132,5 +210,9 @@ def get_provider(name: str | None = None) -> Provider:
         return StubProvider({})
     if name == "azure": 
         return AzureProvider() 
+    if name == "gemini":
+        return GeminiProvider()
+    if name == "keyword":
+        return KeywordProvider()
     # "anthropic" is registered in Phase 9.
     raise ValueError(f"unknown provider: {name!r}")

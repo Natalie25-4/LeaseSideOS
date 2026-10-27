@@ -12,3 +12,6 @@ uvicorn
 # Development and tests
 pytest
 httpx          # required by fastapi.testclient.TestClient
+pdfplumber
+python-multipart
+google-genai
