@@ -9,6 +9,7 @@ import json
 
 from pdf_extraction import extract_text_with_pages
 from clause_extraction import extract_clauses, client
+from confidence_policy import apply_confidence_policy, fallback_response
 
 app = FastAPI()
 
@@ -43,6 +44,8 @@ Respond ONLY with valid JSON in this exact structure:
 
 @app.post("/ask")
 async def ask(req: AskRequest):
+    if not req.clauses:
+        return fallback_response()
     try:
         clauses_text = "\n".join(
             f"[{c['category']} - page {c['page']}] {c['text']}" for c in req.clauses
@@ -53,11 +56,15 @@ async def ask(req: AskRequest):
             contents=[ASK_PROMPT, f"Clauses:\n{clauses_text}\n\nQuestion: {req.question}"],
         )
 
-        raw = response.text.strip()
+        raw = (response.text or "").strip()
         if raw.startswith("```"):
             raw = raw.strip("`").removeprefix("json").strip()
 
-        return json.loads(raw)
+        try:
+            result = json.loads(raw)
+        except json.JSONDecodeError:
+            return fallback_response()
+        return apply_confidence_policy(result)
 
     except Exception as e:
         print(traceback.format_exc())
