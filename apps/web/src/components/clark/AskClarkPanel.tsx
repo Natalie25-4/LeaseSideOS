@@ -36,7 +36,7 @@ export function AskClarkPanel() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:8000/ask", {
+      const res = await fetch("http://localhost:4000/api/portfolio/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question, clauses: selectedLease.clauses }),

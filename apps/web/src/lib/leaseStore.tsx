@@ -1,5 +1,7 @@
 "use client";
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 export interface Clause {
   category: string;
@@ -55,6 +57,19 @@ const LeaseStoreContext = createContext<LeaseStoreContextValue | null>(null);
 export function LeaseStoreProvider({ children }: { children: ReactNode }) {
   const [leases, setLeases] = useState<Lease[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+
+  // Load what's already stored in Postgres, so the dashboard survives a refresh.
+  useEffect(() => {
+    fetch(`${API}/api/portfolio/leases`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+      .then((data: Lease[]) => {
+        setLeases(data);
+        setTasks(data.flatMap(deriveTasks));
+      })
+      .catch(() => {
+        /* API unavailable — fall back to in-memory uploads */
+      });
+  }, []);
 
   const addLease = (lease: Lease) => {
     setLeases((prev) => [...prev, lease]);
